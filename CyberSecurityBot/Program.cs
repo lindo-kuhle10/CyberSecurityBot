@@ -20,7 +20,7 @@ namespace CyberSecurityBot
             Console.WriteLine("\nPress Enter to start chatting...");
             Console.ReadLine();
 
-            // Start the chatbot
+            // Start the chatbot - Fixed version
             ChatBot bot = new ChatBot();
             bot.StartConversation();
             bot.Run();
