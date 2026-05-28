@@ -1,92 +1,193 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace CyberSecurityBot
+namespace CybersecurityChatbot
 {
-    public class ChatBot
+    public class Chatbot
     {
-        private string userName;
+        private Dictionary<string, string> userData;
+        private string currentTopic;
+        private Random random;
+        private Dictionary<string, List<string>> keywordResponses;
+        private List<string> worriedKeywords;
+        private List<string> positiveKeywords;
 
-        // This method asks for the user's name
-        public void StartConversation()
+        public Chatbot()
         {
-            UserInterface.PrintHeader("USER REGISTRATION");
-            Console.Write("Please enter your name: ");
-            userName = Console.ReadLine();
-
-            // Input Validation: If they don't type a name, call them "Guest"
-            if (string.IsNullOrWhiteSpace(userName))
-            {
-                userName = "Guest";
-                Console.WriteLine("No name provided? I'll call you Guest.");
-            }
-
-            // Use the TypeWriter effect for the welcome message
-            UserInterface.TypeWriter($"\nWelcome, {userName}! I am your Cybersecurity Awareness Assistant.");
+            userData = new Dictionary<string, string>();
+            random = new Random();
+            currentTopic = null;
+            InitializeKeywordResponses();
+            InitializeSentimentKeywords();
         }
 
-        // This is the main loop that keeps the chat running
-        public void Run()
+        private void InitializeKeywordResponses()
         {
-            while (true)
+            keywordResponses = new Dictionary<string, List<string>>();
+
+            // PASSWORD
+            keywordResponses["password"] = new List<string>
             {
-                UserInterface.PrintHeader("HOW CAN I HELP?");
-                Console.WriteLine("Type 'quit' to exit, or 'help' to see topics.");
-                Console.Write("You: ");
-                string input = Console.ReadLine();
+                "Use strong passwords with at least 12 characters, mixing uppercase, lowercase, numbers, and symbols.",
+                "Never reuse passwords across different accounts. Use a password manager.",
+                "Enable two-factor authentication (2FA) whenever possible.",
+                "Avoid using personal information like birthdays in your passwords."
+            };
 
-                // Input Validation: Check if input is empty
-                if (string.IsNullOrWhiteSpace(input))
+            // SCAM
+            keywordResponses["scam"] = new List<string>
+            {
+                "Be cautious of unsolicited emails asking for personal information.",
+                "Verify sender email addresses carefully - scammers use similar-looking addresses.",
+                "Never click suspicious links. Hover first to see the actual URL.",
+                "If an offer seems too good to be true, it probably is a scam."
+            };
+
+            // PHISHING
+            keywordResponses["phishing"] = new List<string>
+            {
+                "Be cautious of emails asking for personal information.",
+                "Check for spelling errors - legitimate companies proofread.",
+                "Look for the padlock symbol (🔒) in the browser address bar.",
+                "When in doubt, contact the company directly using their official website."
+            };
+
+            // PRIVACY
+            keywordResponses["privacy"] = new List<string>
+            {
+                "Review privacy settings on social media accounts regularly.",
+                "Use a VPN when connecting to public Wi-Fi networks.",
+                "Be careful about what personal information you share online.",
+                "Use private browsing mode when you don't want activity tracked."
+            };
+
+            // MALWARE
+            keywordResponses["malware"] = new List<string>
+            {
+                "Keep antivirus software updated and run regular scans.",
+                "Only download software from official sources.",
+                "Be careful with email attachments - scan before opening.",
+                "Keep your OS and software up to date with security patches."
+            };
+
+            // SAFE BROWSING (from Part 1)
+            keywordResponses["safe browsing"] = new List<string>
+            {
+                "Look for 'https://' and the padlock icon (🔒) before entering personal info.",
+                "Avoid clicking links in suspicious emails. Type the website address manually.",
+                "Use browser extensions that warn about dangerous websites.",
+                "Keep your browser updated to protect against security vulnerabilities."
+            };
+
+            // HOW ARE YOU (from Part 1)
+            keywordResponses["how are you"] = new List<string>
+            {
+                "I'm just a bot, but my systems are running at 100% efficiency! 🔒",
+                "All systems operational! Ready to help you stay cyber-safe.",
+                "Functioning perfectly! What cybersecurity topic can I help you with?"
+            };
+        }
+
+        private void InitializeSentimentKeywords()
+        {
+            worriedKeywords = new List<string> { "worried", "scared", "afraid", "concerned", "anxious", "fear", "stress", "unsafe", "danger" };
+            positiveKeywords = new List<string> { "great", "good", "excellent", "happy", "confident", "safe", "secure", "thank" };
+        }
+
+        public string ProcessMessage(string userInput, out string sentiment)
+        {
+            userInput = userInput.ToLower().Trim();
+            sentiment = DetectSentiment(userInput);
+
+            if (IsFollowUpRequest(userInput))
+                return HandleFollowUp();
+
+            StoreUserInfo(userInput);
+            string response = FindKeywordResponse(userInput);
+
+            return response ?? "I'm not sure I understand. Try asking about passwords, scams, phishing, privacy, malware, or safe browsing.";
+        }
+
+        private string DetectSentiment(string userInput)
+        {
+            foreach (var word in worriedKeywords)
+                if (userInput.Contains(word)) return "worried";
+            foreach (var word in positiveKeywords)
+                if (userInput.Contains(word)) return "positive";
+            return "neutral";
+        }
+
+        private bool IsFollowUpRequest(string userInput)
+        {
+            string[] phrases = { "another", "more", "again", "continue", "tell me more", "explain more", "give me another" };
+            return phrases.Any(p => userInput.Contains(p));
+        }
+
+        private string HandleFollowUp()
+        {
+            if (currentTopic != null && keywordResponses.ContainsKey(currentTopic))
+                return keywordResponses[currentTopic][random.Next(keywordResponses[currentTopic].Count)];
+            return "What topic would you like to know more about?";
+        }
+
+        private void StoreUserInfo(string userInput)
+        {
+            if (userInput.Contains("my name is") || userInput.Contains("i'm ") || userInput.Contains("i am "))
+            {
+                int index = Math.Max(userInput.IndexOf("my name is"), userInput.IndexOf("i'm"));
+                if (index >= 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("I didn't hear you. Please type a message.");
-                    Console.ResetColor();
-                    continue; // Restarts the loop
+                    string name = userInput.Substring(index + (userInput.Contains("my name is") ? 10 : 3)).Trim();
+                    userData["name"] = name;
                 }
-
-                // Check if user wants to quit
-                if (input.ToLower() == "quit")
+            }
+            foreach (var keyword in keywordResponses.Keys)
+            {
+                if (userInput.Contains(keyword))
                 {
-                    UserInterface.TypeWriter("Staying safe! Goodbye for now.");
-                    break; // Exits the loop
+                    userData["favoriteTopic"] = keyword;
+                    currentTopic = keyword;
                 }
-
-                ProcessInput(input.ToLower());
             }
         }
 
-        // This method decides what the bot says based on keywords
-        private void ProcessInput(string input)
+        private string FindKeywordResponse(string userInput)
         {
-            if (input.Contains("help") || input.Contains("topics"))
+            // Handle "link" as synonym for "safe browsing" (from Part 1)
+            if (userInput.Contains("link") && !userInput.Contains("safe browsing"))
             {
-                Console.WriteLine("\nI can help you with:");
-                Console.WriteLine(" - Password Safety");
-                Console.WriteLine(" - Phishing Scams");
-                Console.WriteLine(" - Safe Browsing");
+                userInput = userInput + " safe browsing";
             }
-            else if (input.Contains("password"))
+
+            foreach (var keyword in keywordResponses.Keys)
             {
-                UserInterface.TypeWriter("Passwords should be at least 12 characters long and include symbols, numbers, and letters. Never share them!");
+                if (userInput.Contains(keyword))
+                {
+                    currentTopic = keyword;
+                    var responses = keywordResponses[keyword];
+                    string response = responses[random.Next(responses.Count)];
+
+                    if (userData.ContainsKey("name"))
+                        response = $"Hi {userData["name"]}, {response}";
+
+                    string sentiment = DetectSentiment(userInput);
+                    if (sentiment == "worried")
+                        response = "I understand your concern. " + response + " You're taking the right step!";
+                    else if (sentiment == "positive")
+                        response = "Great attitude! " + response;
+
+                    return response;
+                }
             }
-            else if (input.Contains("phishing"))
-            {
-                UserInterface.TypeWriter("Phishing is when scammers pretend to be a company to steal your data. Always check the sender's email address.");
-            }
-            else if (input.Contains("safe browsing") || input.Contains("link"))
-            {
-                UserInterface.TypeWriter("Look for 'https://' and the padlock icon in your browser before entering personal info.");
-            }
-            else if (input.Contains("how are you"))
-            {
-                UserInterface.TypeWriter("I'm just a bot, but my systems are running at 100% efficiency!");
-            }
-            else
-            {
-                // Default response if the bot doesn't understand
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("I'm not sure I understand. Try asking about 'passwords', 'phishing', or type 'help'.");
-                Console.ResetColor();
-            }
+            return null;
+        }
+
+        public string GetPersonalizedTip()
+        {
+            if (userData.ContainsKey("favoriteTopic") && keywordResponses.ContainsKey(userData["favoriteTopic"]))
+                return keywordResponses[userData["favoriteTopic"]][random.Next(keywordResponses[userData["favoriteTopic"]].Count)];
+            return "Consider learning about password security - it's a great place to start!";
         }
     }
 }
