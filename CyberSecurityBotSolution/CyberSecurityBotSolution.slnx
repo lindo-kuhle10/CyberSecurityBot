@@ -1,5 +1,0 @@
-<Solution>
-  <Project Path="../CyberSecurityBot.Core/CyberSecurityBot.Core/CyberSecurityBot.Core.csproj" />
-  <Project Path="../CyberSecurityBot/CyberSecurityBot/CyberSecurityBot.csproj" />
-  <Project Path="CyberSecurityBot.GUI/CyberSecurityBot.GUI.csproj" Id="c4d5bd27-072d-42de-9e46-7759b7bb1280" />
-</Solution>
